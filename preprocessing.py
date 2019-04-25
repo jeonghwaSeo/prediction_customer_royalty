@@ -41,4 +41,24 @@ df_txn.merchant_id.value_counts()
 df_txn.category_2.value_counts()
 df_txn.category_2.value_counts()
 
-df_txn = hist_feature_engineering (df_txn, )
+df_ = feature_engineering (df_txn, df)
+df_ = feature_engineering (df_newtxn, df_)
+
+df_train = df_.loc[df_['target']!= -10000]
+df_test = df_.loc[df_['target']== -10000]
+
+for df in [df_train,df_test]:
+    df['first_active_month'] = pd.to_datetime(df['first_active_month'])
+    df['dayofweek'] = df['first_active_month'].dt.dayofweek
+    df['weekofyear'] = df['first_active_month'].dt.weekofyear
+    df['month'] = df['first_active_month'].dt.month
+    df['elapsed_time'] = (datetime.datetime.today() - df['first_active_month']).dt.days
+    df['hist_first_buy'] = (df['purchase_date_min_x'] - df['first_active_month']).dt.days
+    df['new_hist_first_buy'] = (df['purchase_date_min_y'] - df['first_active_month']).dt.days
+    for f in ['purchase_date_max_x','purchase_date_min_x','purchase_date_max_y', 'purchase_date_min_y']:
+        df[f] = df[f].astype(np.int64) * 1e-9
+    df['card_id_total'] = df['card_id_size_y']+df['card_id_size_x']
+    df['purchase_amount_total'] = df['purchase_amount_sum_x']+df['purchase_amount_sum_y']
+
+df_train.to_csv("train_cleansing.csv", index=False)
+df_test.to_csv('test_cleansing.csv', index=False)
