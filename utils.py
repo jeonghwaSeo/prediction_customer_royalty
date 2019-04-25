@@ -30,7 +30,7 @@ def train_test(df_train, df_test):
     
     return df
     
-def hist_feature_engineering (df):
+def feature_engineering (df, df_):
     
     df['category_2'].fillna(1.0,inplace=True)
     df['category_3'].fillna('A',inplace=True)
@@ -42,14 +42,16 @@ def hist_feature_engineering (df):
     
     # mapping : numerical to categorical
     df['category_2'] = df['category_2'].map({1.0:'A', 2.0:'B', 3.0:'C', 4.0:'D', 5.0:'E'}) 
-    
+ 
     # purchase_amount sum by category_2, 3
+    
     for col in ['category_2','category_3']:
         df[col+'_mean'] = df.groupby([col])['purchase_amount'].transform('mean')
         df[col+'_sum'] = df.groupby([col])['purchase_amount'].transform('sum')
         df[col+'_max'] = df.groupby([col])['purchase_amount'].transform('max')
         df[col+'_min'] = df.groupby([col])['purchase_amount'].transform('min')
         #aggs[col+'_mean'] = ['mean']
+     
     
     # additional features
     df['purchase_date'] = pd.to_datetime(df['purchase_date'])
@@ -60,7 +62,6 @@ def hist_feature_engineering (df):
     df['dayofweek'] = df['purchase_date'].dt.dayofweek
     df['weekend'] = (df.purchase_date.dt.weekday >=5).astype(int)
     df['hour'] = df['purchase_date'].dt.hour
-    df['price'] = df['purchase_amount'] / df['installments']
     df['month_diff'] = ((datetime.datetime.today() - df['purchase_date']).dt.days)//30
     df['month_diff'] += df['month_lag']
 
@@ -87,17 +88,17 @@ def hist_feature_engineering (df):
     aggs['amount_month_ratio']=['mean','min','max','var','skew']
     
     # feature aggregation
-    new_columns = ['hist' + '_' + k + '_' + agg for k in aggs.keys() for agg in aggs[k]]
-    df_txn_group = df.groupby('card_id').agg(aggs)
-
+    new_columns = [k + '_' + agg for k in aggs.keys() for agg in aggs[k]]
+    df_group = df.groupby('card_id').agg(aggs)
+    
     # reindexing 
-    df_txn_group.columns = new_columns
-    df_txn_group.reset_index(drop=False,inplace=True)
-
+    df_group.columns = new_columns
+    df_group.reset_index(drop=False,inplace=True)
+    
     # add features using added features
-    df_txn_group['hist_purchase_date_diff'] = (df_txn_group['hist_purchase_date_max'] - df_txn_group['hist_purchase_date_min']).dt.days
-    df_txn_group['hist_purchase_date_average'] = df_txn_group['hist_purchase_date_diff']/df_txn_group['hist_card_id_size']
-    df_txn_group['hist_purchase_date_uptonow'] = (datetime.datetime.today() - df_txn_group['hist_purchase_date_max']).dt.days
-    df_ = df_.merge(df_txn_group,on='card_id',how='left')
+    df_group['purchase_date_diff'] = (df_group['purchase_date_max'] - df_group['purchase_date_min']).dt.days
+    df_group['purchase_date_average'] = df_group['purchase_date_diff']/df_group['card_id_size']
+    df_group['purchase_date_uptonow'] = (datetime.datetime.today() - df_group['purchase_date_max']).dt.days
+    df_ = df_.merge(df_group,on='card_id',how='left')
     
     return df_
